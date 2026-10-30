@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>開業シミュレーター</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="開業シミュ">
+<meta name="theme-color" content="#1d3557">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Maru+Gothic:wght@500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: 1カラムのスマホアプリ。上に固定ヘッダー、下に4つのタブ。PCでは中央に最大720px */
+:root{
+  --bg:#f3f6f8; --surface:#ffffff; --sunk:#e6edf1;
+  --ink:#16222e; --muted:#5b6b78; --line:#d3dde4;
+  --ai:#1d3557;        /* 藍：主色 */
+  --ai-soft:#dde7f2;
+  --take:#2f7d5b;      /* 若竹：手元に残るお金 */
+  --take-soft:#dcefe5;
+  --warn:#b45309; --warn-soft:#fbead3;
+  --risk:#b42318; --risk-soft:#fbe0dd;
+  --f-disp:"Zen Maru Gothic","Hiragino Maru Gothic ProN","BIZ UDPGothic",sans-serif;
+  --f-body:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1720; --surface:#172330; --sunk:#0b121a;
+  --ink:#e6edf3; --muted:#9aabb9; --line:#2a3a4a;
+  --ai:#8fb4e3; --ai-soft:#1d2f45;
+  --take:#6cc79a; --take-soft:#163428;
+  --warn:#f0a35a; --warn-soft:#3a2814;
+  --risk:#f2877d; --risk-soft:#3d1a17;
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f1720; --surface:#172330; --sunk:#0b121a;
+  --ink:#e6edf3; --muted:#9aabb9; --line:#2a3a4a;
+  --ai:#8fb4e3; --ai-soft:#1d2f45;
+  --take:#6cc79a; --take-soft:#163428;
+  --warn:#f0a35a; --warn-soft:#3a2814;
+  --risk:#f2877d; --risk-soft:#3d1a17;
+  color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.7;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ai)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ai);color:#fff}
+:root[data-theme="dark"] header{background:#13243a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) header{background:#13243a}}
+header .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+header h1{font-family:var(--f-disp);font-weight:900;font-size:19px;margin:0;letter-spacing:.04em;flex:1;min-width:0}
+header h1 small{display:block;font-family:var(--f-body);font-weight:400;font-size:11px;opacity:.8;letter-spacing:.08em}
+.chip{font-size:12px;border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:3px 10px;white-space:nowrap;max-width:45%;overflow:hidden;text-overflow:ellipsis}
+main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
+section.view{display:grid;gap:14px}
+h2{font-family:var(--f-disp);font-size:20px;margin:4px 0 0;text-wrap:balance}
+.lead{color:var(--muted);margin:0;font-size:14px}
+
+/* 入力グループ */
+details.grp{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+details.grp>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px;font-weight:700}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary .sum{margin-left:auto;font-family:var(--f-num);font-size:13px;color:var(--muted);font-weight:500}
+details.grp>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-left:6px;transition:transform .2s}
+details.grp[open]>summary::after{transform:rotate(-135deg)}
+.tag{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--ai-soft);color:var(--ai);font-weight:700;letter-spacing:.06em}
+.fields{padding:0 16px 16px;display:grid;gap:12px}
+.field{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+.field label{font-size:14px}
+.field .hint{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:-2px}
+.inp{display:flex;align-items:center;background:var(--sunk);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.inp input{width:7.5em;border:0;background:transparent;color:var(--ink);font-family:var(--f-num);font-size:17px;text-align:right;padding:9px 6px 9px 10px}
+.inp span{font-size:12px;color:var(--muted);padding-right:10px;white-space:nowrap}
+.inp:focus-within{border-color:var(--ai);box-shadow:0 0 0 3px var(--ai-soft)}
+input:focus{outline:none}
+
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+button{font-family:var(--f-body);font-size:14px;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 14px}
+button:focus-visible,summary:focus-visible,.tabbar a:focus-visible{outline:3px solid var(--ai);outline-offset:2px}
+button.primary{background:var(--ai);border-color:var(--ai);color:var(--surface);font-weight:700}
+button.ghost{background:transparent}
+button.danger{color:var(--risk);border-color:var(--risk)}
+
+/* 判定カード */
+.verdict{border-radius:16px;padding:16px;display:grid;gap:6px;border:2px solid}
+.verdict.ok{background:var(--take-soft);border-color:var(--take)}
+.verdict.mid{background:var(--warn-soft);border-color:var(--warn)}
+.verdict.ng{background:var(--risk-soft);border-color:var(--risk)}
+.verdict .lv{font-family:var(--f-disp);font-weight:900;font-size:24px}
+.verdict.ok .lv{color:var(--take)} .verdict.mid .lv{color:var(--warn)} .verdict.ng .lv{color:var(--risk)}
+.verdict p{margin:0;font-size:14px}
+
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:2px;align-content:start}
+.kpi .k{font-size:12px;color:var(--muted)}
+.kpi .v{font-family:var(--f-num);font-weight:600;font-size:22px;font-variant-numeric:tabular-nums;line-height:1.3}
+.kpi .v small{font-family:var(--f-body);font-size:12px;font-weight:400;color:var(--muted);margin-left:2px}
+.kpi .n{font-size:12px;color:var(--muted)}
+.pos{color:var(--take)} .neg{color:var(--risk)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px}
+.card h3{margin:0;font-size:15px}
+.split{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--sunk)}
+.split div{height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+.chartbox{position:relative;width:100%;height:260px}
+canvas{width:100%;height:100%;display:block}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--sunk);font-weight:700;font-size:12px;color:var(--muted)}
+td:first-child,th:first-child{text-align:left}
+td{font-family:var(--f-num)}
+
+/* 解説 */
+.guide{display:grid;gap:12px}
+.lesson{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:8px}
+.lesson h3{margin:0;font-family:var(--f-disp);font-size:17px}
+.lesson p{margin:0}
+.brain{font-size:13px;background:var(--ai-soft);border-radius:10px;padding:10px 12px}
+.brain b{color:var(--ai)}
+
+.scen{display:grid;gap:8px}
+.scen-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.scen-row .inp input{width:12em;text-align:left;font-family:var(--f-body);font-size:15px}
+.scen-list{display:grid;gap:6px}
+.scen-item{display:flex;gap:8px;align-items:center;background:var(--sunk);border-radius:10px;padding:6px 6px 6px 12px}
+.scen-item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scen-item button{padding:6px 10px;font-size:13px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:13px;z-index:20}
+
+nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabbar .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.tabbar a{display:grid;justify-items:center;gap:2px;padding:8px 0 10px;color:var(--muted);text-decoration:none;font-size:11px;font-weight:700}
+.tabbar a svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar a[aria-current="page"]{color:var(--ai)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>開業シミュレーター<small>治療院の「お財布」が続くかを確かめる</small></h1>
+    <span class="chip" id="chipName">サンプル：鍼灸院（一人開業）</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ===== 入力 ===== -->
+<section class="view" id="v-input">
+  <div>
+    <h2>数字を入れてみよう</h2>
+    <p class="lead">入れたとたんに「結果」と「推移」が変わります。最初はサンプルの数字が入っています。</p>
+  </div>
+  <div class="presets" aria-label="ひな形">
+    <button type="button" data-preset="shinkyu">鍼灸院（一人）</button>
+    <button type="button" data-preset="seikotsu">整骨院（スタッフ1名）</button>
+    <button type="button" data-preset="both">鍼灸整骨院（スタッフ2名）</button>
+  </div>
+  <div id="groups"></div>
+</section>
+
+<!-- ===== 結果 ===== -->
+<section class="view" id="v-result" hidden>
+  <div id="verdict" class="verdict"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="card">
+    <h3>落ち着いた月（立ち上がり後）の売上の行き先</h3>
+    <div class="split" id="split"></div>
+    <div class="legend" id="splitLegend"></div>
+  </div>
+  <div class="card">
+    <h3>あと何人で、どう変わる？</h3>
+    <div class="tbl"><table id="sens"></table></div>
+  </div>
+</section>
+
+<!-- ===== 推移 ===== -->
+<section class="view" id="v-trend" hidden>
+  <div>
+    <h2>お財布の残高（36か月）</h2>
+    <p class="lead">線が0より下に行った月は、お金が足りなくなる月です。</p>
+  </div>
+  <div class="card">
+    <div class="chartbox"><canvas id="chart" aria-label="資金残高の推移グラフ" role="img"></canvas></div>
+    <div class="legend"><span><i style="background:var(--ai)"></i>お財布の残高</span><span><i style="background:var(--take)"></i>その月のプラス</span><span><i style="background:var(--risk)"></i>その月のマイナス</span></div>
+  </div>
+  <div class="tbl" style="max-height:420px"><table id="monthly"></table></div>
+</section>
+
+<!-- ===== 解説・保存 ===== -->
+<section class="view" id="v-guide" hidden>
+  <div class="card scen">
+    <h3>パターンを保存</h3>
+    <div class="scen-row">
+      <div class="inp"><input id="scenName" type="text" placeholder="例：堺市・駅前案" maxlength="30"></div>
+      <button type="button" class="primary" id="btnSave">保存する</button>
+    </div>
+    <div class="scen-list" id="scenList"></div>
+    <p class="lead" style="font-size:12px">保存先はこの端末のブラウザの中だけです。機種変更や履歴削除で消えることがあります。</p>
+  </div>
+  <div class="guide" id="guide"></div>
+</section>
+
+</main>
+
+<nav class="tabbar" aria-label="画面切り替え">
+  <div class="wrap">
+    <a href="#input" data-v="input"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>入力</a>
+    <a href="#result" data-v="result"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8 12l3 3 5-6"/></svg>結果</a>
+    <a href="#trend" data-v="trend"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M5 15l4-4 4 3 6-7"/></svg>推移</a>
+    <a href="#guide" data-v="guide"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6"/></svg>解説・保存</a>
+  </div>
+</nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* =========================================================
+   1. 入力項目の定義（仕様書 4章と対応）
+   unit: man=万円で入力, yen=円, pct=%, num=数値
+========================================================= */
+const GROUPS = [
+  {id:"init", tag:"はじめ", title:"開業にかかるお金", sumKey:"initTotal", fields:[
+    {k:"property", l:"物件取得費（敷金・礼金・仲介）", u:"man"},
+    {k:"interior", l:"内装・看板工事", u:"man"},
+    {k:"equipment", l:"機器・ベッド・備品", u:"man"},
+    {k:"openAd", l:"開業時の広告・HP制作", u:"man"},
+    {k:"initOther", l:"その他（届出・開業前の家賃など）", u:"man"},
+  ]},
+  {id:"fund", tag:"財布", title:"用意するお金", sumKey:"fundTotal", fields:[
+    {k:"selfFund", l:"自己資金", u:"man"},
+    {k:"loan", l:"借入金額", u:"man", h:"日本政策金融公庫などからの借入"},
+    {k:"rate", l:"年利", u:"pct", step:0.1},
+    {k:"years", l:"返済期間", u:"num", unit:"年"},
+    {k:"grace", l:"据置期間（利息だけ払う期間）", u:"num", unit:"か月"},
+  ]},
+  {id:"sales", tag:"売上", title:"売上の見込み", sumKey:"salesFull", fields:[
+    {k:"price", l:"1人あたりの単価", u:"yen", h:"保険施術なら窓口負担＋療養費の合計で考えます"},
+    {k:"patients", l:"目標の1日の患者数", u:"num", unit:"人"},
+    {k:"days", l:"1か月の営業日数", u:"num", unit:"日"},
+    {k:"startPct", l:"開業1か月目の達成率", u:"pct", h:"目標の何%の患者さんから始まるか"},
+    {k:"ramp", l:"目標に届くまでの月数", u:"num", unit:"か月"},
+    {k:"varPct", l:"変動費率（消耗品・カード手数料など）", u:"pct", step:0.5},
+  ]},
+  {id:"fixed", tag:"毎月", title:"毎月かかるお金", sumKey:"fixedTotal", fields:[
+    {k:"rent", l:"家賃（共益費込）", u:"man"},
+    {k:"staff", l:"スタッフ人件費（社会保険込）", u:"man"},
+    {k:"utility", l:"水道光熱・通信", u:"man"},
+    {k:"adMonthly", l:"毎月の広告費", u:"man"},
+    {k:"lease", l:"リース・システム利用料", u:"man"},
+    {k:"fixOther", l:"その他（保険・会費・税理士など）", u:"man"},
+    {k:"ownerPay", l:"院長の生活費", u:"man", h:"自分のお給料。ここを0にすると「続く」ように見えてしまいます"},
+  ]},
+];
+
+const PRESETS = {
+  shinkyu:{name:"サンプル：鍼灸院（一人開業）",
+    property:60,interior:200,equipment:100,openAd:30,initOther:30,
+    selfFund:300,loan:500,rate:2.0,years:7,grace:6,
+    price:5000,patients:10,days:22,startPct:30,ramp:12,varPct:8,
+    rent:15,staff:0,utility:3,adMonthly:3,lease:2,fixOther:3,ownerPay:25},
+  seikotsu:{name:"サンプル：整骨院（スタッフ1名）",
+    property:80,interior:300,equipment:250,openAd:50,initOther:40,
+    selfFund:400,loan:800,rate:2.0,years:7,grace:6,
+    price:2200,patients:35,days:24,startPct:35,ramp:12,varPct:6,
+    rent:20,staff:25,utility:4,adMonthly:5,lease:5,fixOther:5,ownerPay:30},
+  both:{name:"サンプル：鍼灸整骨院（スタッフ2名）",
+    property:100,interior:400,equipment:300,openAd:60,initOther:50,
+    selfFund:500,loan:1000,rate:2.0,years:8,grace:6,
+    price:3200,patients:40,days:24,startPct:35,ramp:15,varPct:7,
+    rent:25,staff:50,utility:5,adMonthly:6,lease:6,fixOther:6,ownerPay:35},
+};
+
+const MONTHS = 36;
+let state = {...PRESETS.shinkyu};
+
+/* =========================================================
+   2. 計算エンジン（純粋関数・仕様書 5章）
+========================================================= */
+function simulate(s){
+  const M = 10000;
+  const initTotal = (s.property+s.interior+s.equipment+s.openAd+s.initOther)*M;
+  const loanYen = s.loan*M;
+  const cash0 = s.selfFund*M + loanYen - initTotal;          // 開業日の財布
+  const fixed = (s.rent+s.staff+s.utility+s.adMonthly+s.lease+s.fixOther)*M;
+  const owner = s.ownerPay*M;
+  const r = s.rate/100/12;
+  const n = Math.max(1, Math.round(s.years*12) - s.grace);    // 元金返済回数
+  const pay = loanYen<=0 ? 0 : (r===0 ? loanYen/n : loanYen*r/(1-Math.pow(1+r,-n)));
+  const fullPatients = s.patients;
+  const v = s.varPct/100;
+
+  const rows = [];
+  let cash = cash0, bal = loanYen, cum = 0, minCash = cash0, minMonth = 0, shortMonth = null, payback = null;
+  for(let m=1;m<=MONTHS;m++){
+    const ramp = s.ramp<=1 ? 1 : Math.min(1, s.startPct/100 + (1-s.startPct/100)*(m-1)/(s.ramp-1));
+    const pts = fullPatients*ramp;
+    const sales = pts*s.price*s.days;
+    const varc = sales*v;
+    let interest = bal*r, principal = 0, debt = 0;
+    if(bal>0){
+      if(m<=s.grace){ debt = interest; }
+      else { debt = Math.min(pay, bal+interest); principal = debt-interest; }
+    }
+    bal = Math.max(0, bal-principal);
+    const cf = sales - varc - fixed - owner - debt;
+    cash += cf; cum += cf;
+    if(cash<minCash){minCash=cash;minMonth=m;}
+    if(shortMonth===null && cash<0) shortMonth=m;
+    if(payback===null && s.selfFund>0 && cum>=s.selfFund*M) payback=m;
+    rows.push({m,pts,sales,varc,fixed,owner,debt,interest,cf,cash,bal});
+  }
+  // 安定期（目標達成時）の1か月
+  const salesFull = fullPatients*s.price*s.days;
+  const payFull = loanYen>0 ? pay : 0;
+  const cfFull = salesFull*(1-v) - fixed - owner - payFull;
+  // 損益分岐（1日何人で収支0か）
+  const perPatient = s.price*(1-v)*s.days; // 1日1人増えると月に増えるお金
+  const bePatients = perPatient>0 ? (fixed+owner+payFull)/perPatient : Infinity;
+  const beNoOwner = perPatient>0 ? (fixed+payFull)/perPatient : Infinity;
+  return {initTotal,cash0,fixed,owner,pay:payFull,salesFull,cfFull,bePatients,beNoOwner,
+          rows,minCash,minMonth,shortMonth,payback,fundTotal:(s.selfFund+s.loan)*M,
+          varFull:salesFull*v};
+}
+/* 自己資金の回収：累計の手残りが自己資金に届いた月 */
+
+/* =========================================================
+   3. 表示ヘルパー
+========================================================= */
+const man = y => (Math.round(y/1000)/10).toLocaleString("ja-JP",{maximumFractionDigits:1});
+const $ = id => document.getElementById(id);
+function unitLabel(f){return f.u==="man"?"万円":f.u==="yen"?"円":f.u==="pct"?"%":(f.unit||"");}
+
+function buildForm(){
+  const host = $("groups"); host.innerHTML="";
+  GROUPS.forEach((g,i)=>{
+    const d = document.createElement("details"); d.className="grp"; if(i===0) d.open=true;
+    d.innerHTML = `<summary><span class="tag">${g.tag}</span>${g.title}<span class="sum" id="sum-${g.id}"></span></summary><div class="fields"></div>`;
+    const box = d.querySelector(".fields");
+    g.fields.forEach(f=>{
+      const row = document.createElement("div"); row.className="field";
+      row.innerHTML = `<label for="in-${f.k}">${f.l}</label>
+        <div class="inp"><input id="in-${f.k}" type="number" inputmode="decimal" step="${f.step||(f.u==='yen'?100:1)}" min="0"><span>${unitLabel(f)}</span></div>
+        ${f.h?`<div class="hint">${f.h}</div>`:""}`;
+      const inp = row.querySelector("input");
+      inp.value = state[f.k];
+      inp.addEventListener("input",()=>{ const x=parseFloat(inp.value); state[f.k]=isNaN(x)?0:x; markEdited(); render(); });
+      box.appendChild(row);
+    });
+    host.appendChild(d);
+  });
+}
+function fillForm(){ GROUPS.forEach(g=>g.fields.forEach(f=>{ $("in-"+f.k).value = state[f.k]; })); }
+function markEdited(){ if(!state._edited){ state._edited=true; $("chipName").textContent = (state.name||"").replace("サンプル：","")+"（編集中）"; } }
+
+function render(){
+  const R = simulate(state);
+  // グループ合計
+  $("sum-init").textContent = man(R.initTotal)+"万円";
+  $("sum-fund").textContent = man(R.fundTotal)+"万円";
+  $("sum-sales").textContent = "月"+man(R.salesFull)+"万円";
+  $("sum-fixed").textContent = "月"+man(R.fixed+R.owner)+"万円";
+
+  // 判定
+  const v = $("verdict");
+  const target = state.patients;
+  let lv, cls, msg;
+  if(R.shortMonth!==null){
+    cls="ng"; lv="このままだと危ない";
+    msg=`${R.shortMonth}か月目にお財布が空になります。運転資金を${man(-R.minCash)}万円以上ふやすか、毎月の出費を見直しましょう。`;
+  }else if(R.bePatients>target*0.85 || R.minCash < R.fixed*3){
+    cls="mid"; lv="ぎりぎり続く";
+    msg=`お財布はもちますが、一番少ない月（${R.minMonth}か月目）の残りは${man(R.minCash)}万円。家賃などの3か月分（${man(R.fixed*3)}万円）を目安に余裕をもたせると安心です。`;
+  }else{
+    cls="ok"; lv="続けられそう";
+    msg=`一番お財布が細る${R.minMonth||1}か月目でも${man(R.minCash)}万円残ります。目標の${target}人に対して、収支トントンは${R.bePatients.toFixed(1)}人です。`;
+  }
+  v.className="verdict "+cls;
+  v.innerHTML=`<span class="tag" style="justify-self:start">判定</span><div class="lv">${lv}</div><p>${msg}</p>`;
+
+  // KPI
+  const k = [
+    {k:"開業日の財布の中身", v:man(R.cash0), u:"万円", n:"自己資金＋借入−開業費用", c:R.cash0<0?"neg":""},
+    {k:"収支トントンの人数", v:isFinite(R.bePatients)?R.bePatients.toFixed(1):"—", u:"人/日", n:`目標 ${target}人/日`},
+    {k:"落ち着いた月の手残り", v:man(R.cfFull), u:"万円", n:"生活費・返済を払ったあと", c:R.cfFull<0?"neg":"pos"},
+    {k:"お財布がいちばん細る月", v:man(R.minCash), u:"万円", n:R.minMonth?`${R.minMonth}か月目`:"開業日", c:R.minCash<0?"neg":""},
+    {k:"月の売上（目標達成時）", v:man(R.salesFull), u:"万円", n:`${state.price.toLocaleString()}円×${target}人×${state.days}日`},
+    {k:"自己資金を取り戻す月", v:R.payback?R.payback:"36超", u:R.payback?"か月目":"", n:"手残りの累計が自己資金に届く月"},
+  ];
+  $("kpis").innerHTML = k.map(x=>`<div class="kpi"><span class="k">${x.k}</span><span class="v ${x.c||""}">${x.v}<small>${x.u}</small></span><span class="n">${x.n}</span></div>`).join("");
+
+  // 売上の行き先
+  const parts = [
+    {n:"変動費", y:R.varFull, c:"var(--muted)"},
+    {n:"毎月の固定費", y:R.fixed, c:"var(--ai)"},
+    {n:"借入の返済", y:R.pay, c:"var(--warn)"},
+    {n:"院長の生活費", y:R.owner, c:"var(--line)"},
+    {n:"手残り", y:Math.max(0,R.cfFull), c:"var(--take)"},
+  ];
+  const total = Math.max(R.salesFull, R.varFull+R.fixed+R.pay+R.owner) || 1;
+  $("split").innerHTML = parts.map(p=>`<div style="width:${(p.y/total*100).toFixed(2)}%;background:${p.c}" title="${p.n}"></div>`).join("");
+  $("splitLegend").innerHTML = parts.map(p=>`<span><i style="background:${p.c}"></i>${p.n} ${man(p.y)}万円</span>`).join("")
+    + (R.cfFull<0?`<span class="neg">不足 ${man(-R.cfFull)}万円</span>`:"");
+
+  // 感度表
+  const steps = [-4,-2,0,2,4].map(d=>Math.max(1,target+d)).filter((x,i,a)=>a.indexOf(x)===i);
+  $("sens").innerHTML = `<tr><th>1日の患者数</th><th>月の売上</th><th>月の手残り</th><th>最低残高</th></tr>`+
+    steps.map(p=>{ const r=simulate({...state,patients:p});
+      return `<tr${p===target?' style="font-weight:700;background:var(--ai-soft)"':''}><td>${p}人${p===target?"（目標）":""}</td><td>${man(r.salesFull)}万</td><td class="${r.cfFull<0?'neg':'pos'}">${man(r.cfFull)}万</td><td class="${r.minCash<0?'neg':''}">${man(r.minCash)}万</td></tr>`;}).join("");
+
+  // 月次表
+  $("monthly").innerHTML = `<tr><th>月</th><th>患者/日</th><th>売上</th><th>出ていくお金</th><th>その月</th><th>残高</th></tr>`+
+    R.rows.map(r=>`<tr><td>${r.m}か月目</td><td>${r.pts.toFixed(1)}</td><td>${man(r.sales)}</td><td>${man(r.varc+r.fixed+r.owner+r.debt)}</td><td class="${r.cf<0?'neg':'pos'}">${r.cf<0?"":"+"}${man(r.cf)}</td><td class="${r.cash<0?'neg':''}">${man(r.cash)}</td></tr>`).join("");
+
+  lastR = R; drawChart();
+}
+
+/* =========================================================
+   4. グラフ（Canvas・ライブラリなし）
+========================================================= */
+let lastR=null;
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function drawChart(){
+  const cv=$("chart"); if(!lastR||cv.offsetParent===null) return;
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const pad={l:46,r:10,t:12,b:26};
+  const rows=lastR.rows;
+  const vals=rows.map(r=>r.cash).concat(rows.map(r=>r.cf),[lastR.cash0,0]);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  const span=(hi-lo)||1; lo-=span*0.05; hi+=span*0.08;
+  // きりのいい目盛り
+  const raw=(hi-lo)/4, mag=Math.pow(10,Math.floor(Math.log10(raw))), stepv=[1,2,5,10].map(x=>x*mag).find(x=>x>=raw);
+  lo=Math.floor(lo/stepv)*stepv; hi=Math.ceil(hi/stepv)*stepv;
+  const X=i=>pad.l+(W-pad.l-pad.r)*i/MONTHS, Y=v=>pad.t+(H-pad.t-pad.b)*(hi-v)/(hi-lo);
+  g.font="11px "+css("--f-num"); g.fillStyle=css("--muted"); g.strokeStyle=css("--line"); g.lineWidth=1;
+  for(let v=lo; v<=hi+1; v+=stepv){ g.beginPath(); g.moveTo(pad.l,Y(v)); g.lineTo(W-pad.r,Y(v)); g.stroke();
+    g.textAlign="right"; g.textBaseline="middle"; g.fillText(Math.round(v/10000)+"万",pad.l-6,Y(v)); }
+  g.strokeStyle=css("--ink"); g.globalAlpha=.5; g.beginPath(); g.moveTo(pad.l,Y(0)); g.lineTo(W-pad.r,Y(0)); g.stroke(); g.globalAlpha=1;
+  g.textAlign="center"; g.textBaseline="top";
+  [0,6,12,18,24,30,36].forEach(m=>g.fillText(m===0?"開業":m+"月",X(m),H-pad.b+8));
+  // 月の収支バー
+  const bw=Math.max(2,(W-pad.l-pad.r)/MONTHS*0.6);
+  rows.forEach(r=>{ g.fillStyle=r.cf>=0?css("--take"):css("--risk"); g.globalAlpha=.45;
+    const y0=Y(0), y1=Y(r.cf); g.fillRect(X(r.m)-bw/2,Math.min(y0,y1),bw,Math.abs(y1-y0)); });
+  g.globalAlpha=1;
+  // 残高の線＋面
+  const pts=[[0,lastR.cash0]].concat(rows.map(r=>[r.m,r.cash]));
+  g.beginPath(); pts.forEach(([m,v],i)=>i?g.lineTo(X(m),Y(v)):g.moveTo(X(m),Y(v)));
+  g.lineTo(X(MONTHS),Y(0)); g.lineTo(X(0),Y(0)); g.closePath(); g.fillStyle=css("--ai"); g.globalAlpha=.12; g.fill(); g.globalAlpha=1;
+  g.beginPath(); pts.forEach(([m,v],i)=>i?g.lineTo(X(m),Y(v)):g.moveTo(X(m),Y(v)));
+  g.strokeStyle=css("--ai"); g.lineWidth=2.5; g.stroke();
+  // いちばん細る月に印
+  const mm=lastR.minMonth; const mv=mm?rows[mm-1].cash:lastR.cash0;
+  g.beginPath(); g.arc(X(mm),Y(mv),5,0,Math.PI*2); g.fillStyle=mv<0?css("--risk"):css("--ai"); g.fill();
+  g.strokeStyle=css("--surface"); g.lineWidth=2; g.stroke();
+  g.font="bold 11px "+css("--f-body"); g.fillStyle=css("--ink"); g.textAlign=X(mm)>W-90?"right":"left"; g.textBaseline="bottom";
+  g.fillText("いちばん細る月",X(mm)+(X(mm)>W-90?-8:8),Y(mv)-4);
+  // 最終残高
+  const last=rows[MONTHS-1].cash; g.textAlign="right"; g.fillStyle=css("--ai");
+  g.fillText(man(last)+"万",W-pad.r,Y(last)-6);
+}
+
+/* =========================================================
+   5. 解説（脳科学のたとえ話）
+========================================================= */
+const LESSONS = [
+  {t:"お財布の残高は「脳のブドウ糖」",
+   p:"お店はもうかっていても、手元のお金が一瞬でもゼロになると止まってしまいます。黒字なのに倒れる「黒字倒産」です。",
+   b:"<b>脳のたとえ：</b>脳は体重の2%しかないのに、エネルギーの約20%を使います。しかも筋肉のようにエネルギーをたくさん貯めておけません。血糖が少し下がるだけで頭がぼんやりします。お店の「運転資金」も同じで、毎月こまめに入ってこないと止まる。だから「推移」のグラフで一番低い点を見ます。"},
+  {t:"立ち上がりは「シナプスが太くなる」までの時間",
+   p:"開業してすぐ目標の患者さんが来ることはほとんどありません。最初は3割くらいから、1年かけて少しずつ増えていく、という設定にしています。",
+   b:"<b>脳のたとえ：</b>何度も使う神経の道（シナプス）はだんだん太くなり、信号が通りやすくなります（ヘッブの法則）。口コミも同じで、来てくれた人→紹介→また紹介、と道が太くなるには時間がかかります。「目標に届くまでの月数」を短くしすぎないことが大切です。"},
+  {t:"収支トントンの人数は「シーソーのつり合い」",
+   p:"毎月の固定費・返済・生活費を、1日何人の患者さんで支えられるかを計算しています。目標人数がこの数字より十分大きいほど安心です。",
+   b:"<b>脳のたとえ：</b>脳には「興奮させる信号」と「しずめる信号」があり、そのつり合いで正しく働きます。お店も「入ってくるお金」と「出ていくお金」のシーソー。目標人数が分岐点の1.2倍以上あると、少し患者さんが減ってもシーソーが傾きません。"},
+  {t:"固定費は「基礎代謝」、変動費は「運動の消費カロリー」",
+   p:"家賃や人件費は、患者さんが0人の日でもかかります。消耗品やカード手数料は、施術した分だけかかります。",
+   b:"<b>脳のたとえ：</b>寝ていても脳と体が使うエネルギーが基礎代謝。体を動かした分だけ増えるのが活動のエネルギー。開業で一番こわいのは、基礎代謝（固定費）を大きくしすぎること。家賃は一度決めると簡単には変えられません。"},
+  {t:"院長の生活費を0にしない理由",
+   p:"自分の給料を0で計算すると、計算上は長く続くように見えます。でも実際は生活費が必要なので、貯金が先になくなります。",
+   b:"<b>脳のたとえ：</b>睡眠を削って勉強すると、その日は時間が増えたように見えます。でも脳は寝ている間に記憶を整理し、老廃物を流しています（グリンパティック系）。削った分はあとで必ず返ってきます。生活費も同じで、必ず入れて計算しましょう。"},
+  {t:"このアプリの限界",
+   p:"税金・減価償却・保険請求の入金の遅れ（約2か月後）・季節の波は入っていません。実際の事業計画は、税理士や金融機関の担当者と一緒に確認してください。",
+   b:"<b>脳のたとえ：</b>地図アプリは道を教えてくれますが、工事中の道までは知らないことがあります。このアプリは「だいたいの道」を見るための地図です。"},
+];
+function buildGuide(){
+  $("guide").innerHTML = `<h2>数字の読み方</h2>` + LESSONS.map(x=>`<article class="lesson"><h3>${x.t}</h3><p>${x.p}</p><div class="brain">${x.b}</div></article>`).join("");
+}
+
+/* =========================================================
+   6. 保存（この端末のブラウザ内）
+========================================================= */
+const KEY="kaigyo-sim-scenarios-v1";
+function loadAll(){ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; } }
+function saveAll(a){ try{ localStorage.setItem(KEY,JSON.stringify(a)); return true; }catch(e){ return false; } }
+let pendingDelete=null;
+function renderScen(){
+  const a=loadAll(), box=$("scenList");
+  if(!a.length){ box.innerHTML=`<p class="lead" style="font-size:13px">まだ保存したパターンはありません。名前をつけて「保存する」を押すと、ここに並びます。</p>`; return; }
+  box.innerHTML=a.map((s,i)=>`<div class="scen-item"><span>${esc(s.name)}</span>
+    <button type="button" data-load="${i}">開く</button>
+    ${pendingDelete===i?`<button type="button" class="danger" data-del="${i}">本当に削除</button><button type="button" class="ghost" data-cancel>やめる</button>`:`<button type="button" class="ghost" data-ask="${i}">削除</button>`}</div>`).join("");
+}
+function esc(t){return String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function toast(t){ const el=$("toast"); el.textContent=t; el.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>el.hidden=true,1800); }
+
+$("btnSave").addEventListener("click",()=>{
+  const name=$("scenName").value.trim()||("パターン "+new Date().toLocaleDateString("ja-JP"));
+  const a=loadAll(); const data={...state,name,_edited:false};
+  const i=a.findIndex(s=>s.name===name); if(i>=0) a[i]=data; else a.push(data);
+  if(saveAll(a)){ state.name=name; state._edited=false; $("chipName").textContent=name; toast("保存しました"); }
+  else toast("この画面では保存できません。ブラウザで直接開いてください");
+  renderScen();
+});
+$("scenList").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.load!==undefined){ state={...loadAll()[+b.dataset.load]}; fillForm(); $("chipName").textContent=state.name; render(); toast("開きました"); }
+  if(b.dataset.ask!==undefined){ pendingDelete=+b.dataset.ask; }
+  if(b.dataset.cancel!==undefined){ pendingDelete=null; }
+  if(b.dataset.del!==undefined){ const a=loadAll(); a.splice(+b.dataset.del,1); saveAll(a); pendingDelete=null; toast("削除しました"); }
+  renderScen();
+});
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{
+  state={...PRESETS[b.dataset.preset]}; fillForm(); $("chipName").textContent=state.name; render(); toast("ひな形を読み込みました");
+}));
+
+/* =========================================================
+   7. 画面切り替え（#input #result #trend #guide）
+========================================================= */
+const VIEWS=["input","result","trend","guide"];
+function route(){
+  const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):"input";
+  VIEWS.forEach(x=>$("v-"+x).hidden = x!==v);
+  document.querySelectorAll(".tabbar a").forEach(a=>{ if(a.dataset.v===v) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  window.scrollTo(0,0);
+  if(v==="trend") requestAnimationFrame(drawChart);
+}
+window.addEventListener("hashchange",route);
+window.addEventListener("resize",()=>requestAnimationFrame(drawChart));
+try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",drawChart); }catch(e){}
+new MutationObserver(drawChart).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+buildForm(); buildGuide(); renderScen(); render(); route();
+</script>
+</body>
+</html>
